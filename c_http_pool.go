@@ -4,6 +4,7 @@ import (
 	"github.com/golang/groupcache/consistenthash"
 	pb "github.com/golang/groupcache/groupcachepb"
 	"github.com/golang/protobuf/proto"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -76,6 +77,8 @@ func (p *HTTPPool) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	parts := strings.SplitN(r.URL.Path[len(p.opts.BasePath):], "/", 2)
 	groupName := parts[0]
 	key := parts[1]
+
+	log.Printf("HTTPPool.ServeHTTP: groupName=%s, key=%s", groupName, key)
 
 	// Get the value for this key.
 	group := GetGroup(groupName)

@@ -52,6 +52,7 @@ func (ac *GossipCache) NotifyJoin(node *memberlist.Node) {
 	uri := ac.httpGroupCacheURL(node.Name)
 	ac.removePeer(uri)
 	ac.peers = append(ac.peers, uri)
+	log.Printf("GossipCache/NotifyJoin: %+v", ac.peers)
 	if ac.GroupCachePool != nil {
 		ac.GroupCachePool.set(ac.peers...)
 	}
