@@ -24,7 +24,7 @@ type GossipCache struct {
 	logger *log.Logger
 }
 
-func NewGossipHTTPPool() (*GossipCache, error) {
+func NewGossipHTTPPool(gossipPort int) (*GossipCache, error) {
 	var err error
 	ac := GossipCache{}
 	ac.logger = log.New(os.Stderr, "", log.LstdFlags)
@@ -32,9 +32,12 @@ func NewGossipHTTPPool() (*GossipCache, error) {
 	ac.port = ""
 
 	// create memberlist
-	mlConfig := memberlist.DefaultLANConfig()
+	mlConfig := memberlist.DefaultLocalConfig()
 	mlConfig.Events = &ac
+	mlConfig.Name = fmt.Sprintf("%s:%d", "127.0.0.1", gossipPort)
 	mlConfig.Logger = ac.logger
+	mlConfig.BindAddr = "127.0.0.1"
+	mlConfig.BindPort = gossipPort
 	if ac.Memberlist, err = memberlist.Create(mlConfig); err != nil {
 		return nil, fmt.Errorf("gossipcache: can't create memberlist: %w", err)
 	}
@@ -47,12 +50,12 @@ func NewGossipHTTPPool() (*GossipCache, error) {
 	if self.Addr == nil {
 		return nil, errors.New("self addr cannot be nil")
 	}
-	ac.self = self.Addr.String()
+	ac.self = fmt.Sprintf("%s:%d", self.Addr.String(), gossipPort)
 	ac.logger.Printf("gossipcache: self addr is: %s", ac.self)
 
 	// create groupcache pool
 	gcSelf := ac.groupCacheURL(ac.self)
-	ac.GroupCachePool = newHTTPPoolOpts(gcSelf)
+	ac.GroupCachePool = newHTTPPool(gcSelf)
 	return &ac, nil
 }
 
@@ -79,16 +82,12 @@ func (ac *GossipCache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ac.GroupCachePool.ServeHTTP(w, r)
 }
 
-func (ac *GossipCache) JoinOtherGossipNodes(existing []string) (int, error) {
+func (ac *GossipCache) JoinGossipCluster(existing []string) (int, error) {
 	if ac.Memberlist == nil {
 		return 0, errors.New("memberlist cannot be nil")
 	}
 	existing = append(existing, ac.self)
 	return ac.Memberlist.Join(existing)
-}
-
-func (ac *GossipCache) StartHttpServer() {
-	http.Handle(ac.GroupCachePool.opts.BasePath, ac)
 }
 
 //--------------------------------utils-------------------------------------

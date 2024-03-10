@@ -27,6 +27,12 @@ type HTTPPool struct {
 	httpGetters map[string]*httpGetter // keyed by e.g. "http://10.0.0.2:8008"
 }
 
+func newHTTPPool(self string) *HTTPPool {
+	p := newHTTPPoolOpts(self)
+	http.Handle(p.opts.BasePath, p)
+	return p
+}
+
 func newHTTPPoolOpts(self string) *HTTPPool {
 	p := &HTTPPool{
 		self:        self,
