@@ -100,7 +100,7 @@ func (g *Group) Get(ctx context.Context, key string, dest Sink) error {
 }
 
 // load loads key either by invoking the getter locally or by sending it to another machine.
-func (g *Group) load(ctx context.Context, key string, dest Sink) (value ByteView, destPopulated bool, err error) {
+func (g *Group) load(ctx context.Context, keyVal string, dest Sink) (value ByteView, destPopulated bool, err error) {
 	viewi, err := func(key string) (interface{}, error) {
 		if value, cacheHit := g.lookupCache(key); cacheHit {
 			return value, nil
@@ -120,7 +120,7 @@ func (g *Group) load(ctx context.Context, key string, dest Sink) (value ByteView
 		destPopulated = true // only one caller of load gets this return value
 		g.populateCache(key, value, &g.mainCache)
 		return value, nil
-	}(key)
+	}(keyVal)
 
 	if err == nil {
 		value = viewi.(ByteView)

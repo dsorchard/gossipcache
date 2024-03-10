@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"gossipcache"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -18,8 +18,9 @@ var Store = map[string][]byte{
 }
 
 func main() {
-	iport, _ := strconv.Atoi(*flag.String("iport", "8000", "gossip address"))
-	eport := *flag.String("eport", ":8001", "http list")
+	var gossipPort, httpPort int
+	flag.IntVar(&gossipPort, "gossip", 8000, "port number for gossip protocol")
+	flag.IntVar(&httpPort, "http", 8001, "port number for http server")
 	seed := strings.Split(*flag.String("seed", "127.0.0.1:8000", "server pool list"), ",")
 	flag.Parse()
 
@@ -36,7 +37,7 @@ func main() {
 		}))
 
 	// then run the http server.
-	pool, err := gossipcache.NewGossipHTTPPool(iport)
+	pool, err := gossipcache.NewGossipHTTPPool(gossipPort, httpPort)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,7 +49,7 @@ func main() {
 	http.HandleFunc("/color", func(w http.ResponseWriter, r *http.Request) {
 		color := r.FormValue("name")
 		var b []byte
-		err = gc.Get(nil, color, gossipcache.AllocatingByteSliceSink(&b))
+		err = gc.Get(context.Background(), color, gossipcache.AllocatingByteSliceSink(&b))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
@@ -56,5 +57,5 @@ func main() {
 		_, _ = w.Write(b)
 		_, _ = w.Write([]byte{'\n'})
 	})
-	_ = http.ListenAndServe(eport, nil)
+	_ = http.ListenAndServe(fmt.Sprintf(":%d", httpPort), nil)
 }

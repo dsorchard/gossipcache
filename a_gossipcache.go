@@ -24,12 +24,12 @@ type GossipCache struct {
 	logger *log.Logger
 }
 
-func NewGossipHTTPPool(gossipPort int) (*GossipCache, error) {
+func NewGossipHTTPPool(gossipPort int, httpPort int) (*GossipCache, error) {
 	var err error
 	ac := GossipCache{}
 	ac.logger = log.New(os.Stderr, "", log.LstdFlags)
 	ac.scheme = "http"
-	ac.port = ""
+	ac.port = fmt.Sprintf(":%d", httpPort)
 
 	// create memberlist
 	mlConfig := memberlist.DefaultLocalConfig()
@@ -94,6 +94,9 @@ func (ac *GossipCache) JoinGossipCluster(existing []string) (int, error) {
 
 func (ac *GossipCache) groupCacheURL(addr string) string {
 	u := fmt.Sprintf("%s://%s", ac.scheme, addr)
+	if ac.port != "" {
+		u = fmt.Sprintf("%s:%s", u, ac.port)
+	}
 	return u
 }
 
