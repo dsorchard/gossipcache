@@ -1,10 +1,10 @@
 package gossipcache
 
 import (
+	"github.com/charmbracelet/log"
 	"github.com/golang/groupcache/consistenthash"
 	pb "github.com/golang/groupcache/groupcachepb"
 	"github.com/golang/protobuf/proto"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -14,6 +14,8 @@ const (
 	defaultBasePath = "/_groupcache/"
 	defaultReplicas = 50
 )
+
+var httpPoolLogger = log.WithPrefix("dist-kv")
 
 type HTTPPool struct {
 	self string
@@ -63,8 +65,9 @@ func (p *HTTPPool) PickPeer(key string) (peer ProtoGetter, ok bool) {
 	if p.peers.IsEmpty() {
 		return nil, false
 	}
-	if peer := p.peers.Get(key); peer != p.self {
-		return p.httpGetters[peer], true
+	if peerKey := p.peers.Get(key); peerKey != p.self {
+		httpPoolLogger.Infof("HTTPPool.PickPeer: peerKey=%s, self=%s", peerKey, p.self)
+		return p.httpGetters[peerKey], true
 	}
 	return nil, false
 }

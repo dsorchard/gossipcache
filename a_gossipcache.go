@@ -3,10 +3,9 @@ package gossipcache
 import (
 	"errors"
 	"fmt"
+	"github.com/charmbracelet/log"
 	"github.com/hashicorp/memberlist"
 	"net/http"
-
-	"log"
 	"os"
 )
 
@@ -20,14 +19,11 @@ type GossipCache struct {
 	httpPort          int
 	hostGossipAddress string
 	peers             []string
-
-	logger *log.Logger
 }
 
 func NewGossipHTTPPool(gossipPort int, httpPort int) (*GossipCache, error) {
 	var err error
 	ac := GossipCache{}
-	ac.logger = log.New(os.Stderr, "", log.LstdFlags)
 	ac.httpPort = httpPort
 	ac.host = "127.0.0.1"
 
@@ -36,8 +32,8 @@ func NewGossipHTTPPool(gossipPort int, httpPort int) (*GossipCache, error) {
 	mlConfig.Events = &ac
 	mlConfig.BindAddr = "127.0.0.1"
 	mlConfig.BindPort = gossipPort
-	mlConfig.Name = fmt.Sprintf("%d", mlConfig.BindPort)
-	mlConfig.Logger = ac.logger
+	mlConfig.Name = fmt.Sprintf("%d", httpPort)
+	mlConfig.LogOutput = NewMemberlistLogger()
 	if ac.Memberlist, err = memberlist.Create(mlConfig); err != nil {
 		return nil, fmt.Errorf("gossipcache: can't create memberlist: %w", err)
 	}
@@ -49,9 +45,9 @@ func NewGossipHTTPPool(gossipPort int, httpPort int) (*GossipCache, error) {
 }
 
 func (ac *GossipCache) NotifyJoin(node *memberlist.Node) {
-	uri := ac.httpGroupCacheURL(node.Name)
-	ac.removePeer(uri)
-	ac.peers = append(ac.peers, uri)
+	httpUrl := ac.httpGroupCacheURL(node.Name)
+	ac.removePeer(httpUrl)
+	ac.peers = append(ac.peers, httpUrl)
 	log.Printf("GossipCache/NotifyJoin: %+v", ac.peers)
 	if ac.GroupCachePool != nil {
 		ac.GroupCachePool.set(ac.peers...)
@@ -65,7 +61,6 @@ func (ac *GossipCache) NotifyLeave(node *memberlist.Node) {
 }
 
 func (ac *GossipCache) NotifyUpdate(node *memberlist.Node) {
-	ac.logger.Printf("GossipCache/NotifyUpdate: %+v", node)
 }
 
 func (ac *GossipCache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -94,4 +89,23 @@ func (ac *GossipCache) removePeer(uri string) {
 		}
 	}
 	ac.peers = newPeers
+}
+
+// --------------------------------utils-------------------------------------
+
+type MemberlistLogger struct {
+	Logger *log.Logger
+}
+
+func NewMemberlistLogger() MemberlistLogger {
+	return MemberlistLogger{
+		Logger: log.NewWithOptions(os.Stderr, log.Options{
+			Prefix: "memberlist",
+		}),
+	}
+}
+
+func (l MemberlistLogger) Write(p []byte) (n int, err error) {
+	l.Logger.Debug(string(p)) // change it to `Info` to see the memberlist logs
+	return len(p), nil
 }

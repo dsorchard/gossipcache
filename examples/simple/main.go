@@ -27,7 +27,6 @@ func main() {
 	// Create group first. this group is going to be registered in the global map variable.
 	gc := gossipcache.NewGroup("foo", 64<<20, gossipcache.GetterFunc(
 		func(ctx context.Context, key string, dest gossipcache.Sink) error {
-			log.Println("looking up", key)
 			v, ok := Store[key]
 			if !ok {
 				return errors.New("color not found")
