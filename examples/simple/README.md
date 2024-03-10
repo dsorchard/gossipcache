@@ -17,5 +17,5 @@ go build
 ```
 
 ```shell
-curl -Ss -XGET "localhost:8001/color?name=black"
+curl -Ss -XGET "localhost:8001/color?name=green"
 ```

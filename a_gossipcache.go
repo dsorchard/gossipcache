@@ -16,10 +16,10 @@ type GossipCache struct {
 	GroupCachePool *HTTPPool
 	Memberlist     *memberlist.Memberlist
 
-	self   string
-	peers  []string
-	scheme string // http or https
-	port   string // port number = none
+	host              string
+	httpPort          int
+	hostGossipAddress string
+	peers             []string
 
 	logger *log.Logger
 }
@@ -28,39 +28,28 @@ func NewGossipHTTPPool(gossipPort int, httpPort int) (*GossipCache, error) {
 	var err error
 	ac := GossipCache{}
 	ac.logger = log.New(os.Stderr, "", log.LstdFlags)
-	ac.scheme = "http"
-	ac.port = fmt.Sprintf(":%d", httpPort)
+	ac.httpPort = httpPort
+	ac.host = "127.0.0.1"
 
-	// create memberlist
+	// 1. create memberlist
 	mlConfig := memberlist.DefaultLocalConfig()
 	mlConfig.Events = &ac
-	mlConfig.Name = fmt.Sprintf("%s:%d", "127.0.0.1", gossipPort)
-	mlConfig.Logger = ac.logger
 	mlConfig.BindAddr = "127.0.0.1"
 	mlConfig.BindPort = gossipPort
+	mlConfig.Name = fmt.Sprintf("%d", mlConfig.BindPort)
+	mlConfig.Logger = ac.logger
 	if ac.Memberlist, err = memberlist.Create(mlConfig); err != nil {
 		return nil, fmt.Errorf("gossipcache: can't create memberlist: %w", err)
 	}
 
-	// register self.
-	if len(ac.Memberlist.Members()) == 0 {
-		return nil, errors.New("memberlist can't find self")
-	}
-	self := ac.Memberlist.Members()[0]
-	if self.Addr == nil {
-		return nil, errors.New("self addr cannot be nil")
-	}
-	ac.self = fmt.Sprintf("%s:%d", self.Addr.String(), gossipPort)
-	ac.logger.Printf("gossipcache: self addr is: %s", ac.self)
-
 	// create groupcache pool
-	gcSelf := ac.groupCacheURL(ac.self)
-	ac.GroupCachePool = newHTTPPool(gcSelf)
+	httpUrl := ac.httpGroupCacheURL(fmt.Sprintf("%d", ac.httpPort))
+	ac.GroupCachePool = newHTTPPool(httpUrl)
 	return &ac, nil
 }
 
 func (ac *GossipCache) NotifyJoin(node *memberlist.Node) {
-	uri := ac.groupCacheURL(node.Addr.String())
+	uri := ac.httpGroupCacheURL(node.Name)
 	ac.removePeer(uri)
 	ac.peers = append(ac.peers, uri)
 	if ac.GroupCachePool != nil {
@@ -69,7 +58,7 @@ func (ac *GossipCache) NotifyJoin(node *memberlist.Node) {
 }
 
 func (ac *GossipCache) NotifyLeave(node *memberlist.Node) {
-	uri := ac.groupCacheURL(node.Addr.String())
+	uri := ac.httpGroupCacheURL(node.Name)
 	ac.removePeer(uri)
 	ac.GroupCachePool.set(ac.peers...)
 }
@@ -86,18 +75,14 @@ func (ac *GossipCache) JoinGossipCluster(existing []string) (int, error) {
 	if ac.Memberlist == nil {
 		return 0, errors.New("memberlist cannot be nil")
 	}
-	existing = append(existing, ac.self)
+	existing = append(existing, ac.hostGossipAddress)
 	return ac.Memberlist.Join(existing)
 }
 
 //--------------------------------utils-------------------------------------
 
-func (ac *GossipCache) groupCacheURL(addr string) string {
-	u := fmt.Sprintf("%s://%s", ac.scheme, addr)
-	if ac.port != "" {
-		u = fmt.Sprintf("%s:%s", u, ac.port)
-	}
-	return u
+func (ac *GossipCache) httpGroupCacheURL(port string) string {
+	return fmt.Sprintf("%s:%s", ac.host, port)
 }
 
 func (ac *GossipCache) removePeer(uri string) {
