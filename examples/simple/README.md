@@ -18,7 +18,8 @@ go build
 
 
 ```shell
-curl -Ss -XGET "localhost:9001/color?name=ds"
+# will get data from 8001
+curl -Ss -XGET "localhost:9001/color?name=green"
 ```
 
 ```shell

@@ -15,7 +15,7 @@ const (
 	defaultReplicas = 50
 )
 
-var httpPoolLogger = log.WithPrefix("dist-kv")
+var httpPoolLogger = log.WithPrefix("httpPool")
 
 type HTTPPool struct {
 	self string
@@ -81,13 +81,17 @@ func (p *HTTPPool) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	groupName := parts[0]
 	key := parts[1]
 
-	log.Printf("HTTPPool.ServeHTTP: groupName=%s, key=%s", groupName, key)
-
 	// Get the value for this key.
 	group := GetGroup(groupName)
 	ctx := r.Context()
 	var value []byte
 	err := group.Get(ctx, key, AllocatingByteSliceSink(&value))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	httpPoolLogger.Infof("HTTPPool.ServeHTTP: key=%s, value=%s", key, value)
+
 	body, err := proto.Marshal(&pb.GetResponse{Value: value})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
