@@ -17,3 +17,4 @@ This is a simple modification of group cache to support gossip protocol.
       in [MatrixOrigin](https://github.com/arjunsk/matrixone/blob/970b3b8bca5b91f5f8c98618b80ac941a21b286f/pkg/gossip/node.go#L177).
 - We use a global map variable to connect HttpPool and GroupCache (map[groupName]*Group).
 - I don't think we do any kind of redistribution of data since it is a cache.
+- I liked the idea of `peer-picker`, `sink`
