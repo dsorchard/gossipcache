@@ -82,7 +82,7 @@ func (ac *GossipCache) JoinGossipCluster(existing []string) (int, error) {
 //--------------------------------utils-------------------------------------
 
 func (ac *GossipCache) httpGroupCacheURL(port string) string {
-	return fmt.Sprintf("%s:%s", ac.host, port)
+	return fmt.Sprintf("http://%s:%s", ac.host, port)
 }
 
 func (ac *GossipCache) removePeer(uri string) {

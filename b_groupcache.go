@@ -102,11 +102,10 @@ func (g *Group) Get(ctx context.Context, key string, dest Sink) error {
 // load loads key either by invoking the getter locally or by sending it to another machine.
 func (g *Group) load(ctx context.Context, keyVal string, dest Sink) (value ByteView, destPopulated bool, err error) {
 	viewi, err := func(key string) (interface{}, error) {
-		if value, cacheHit := g.lookupCache(key); cacheHit {
+		cacheHit := false
+		if value, cacheHit = g.lookupCache(key); cacheHit {
 			return value, nil
 		}
-		var value ByteView
-		var err error
 		if peer, ok := g.peers.PickPeer(key); ok {
 			value, err = g.getFromPeer(ctx, peer, key)
 			if err == nil {

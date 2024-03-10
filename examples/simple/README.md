@@ -17,5 +17,12 @@ go build
 ```
 
 ```shell
+kill -9 $(lsof -t -i:8001)
+kill -9 $(lsof -t -i:9001)
+kill -9 $(lsof -t -i:10001)
+
+```
+
+```shell
 curl -Ss -XGET "localhost:8001/color?name=green"
 ```
