@@ -32,7 +32,7 @@ func NewGossipHTTPPool(gossipPort int, httpPort int) (*GossipCache, error) {
 	mlConfig.Events = &ac
 	mlConfig.BindAddr = "127.0.0.1"
 	mlConfig.BindPort = gossipPort
-	mlConfig.Name = fmt.Sprintf("%d", httpPort)
+	mlConfig.Name = fmt.Sprintf("%d", httpPort) // TODO: this is a hack
 	mlConfig.LogOutput = NewMemberlistLogger()
 	if ac.Memberlist, err = memberlist.Create(mlConfig); err != nil {
 		return nil, fmt.Errorf("gossipcache: can't create memberlist: %w", err)
