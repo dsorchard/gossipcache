@@ -1,5 +1,7 @@
 # Group Cache + Gossip Protocol
 
+> 🚫 This project is only for learning purposes. Not meant for production usage.
+ 
 This is a simple modification of group cache to support gossip protocol.
 
 ### Reference
